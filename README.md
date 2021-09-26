@@ -22,6 +22,12 @@
 
 
 
+## Demo
+
+[livedemo](https://github.com/sdman111/livedemo/tree/wuzhiying/live_ios_feature_autopack)
+
+
+
 ## Thanks
 
 感谢 [hmap](https://github.com/milend/hmap) ，[cocoapods-hmap](https://github.com/Cat1237/cocoapods-hmap) 两位大佬的开源，特别感谢后者将生成 hmap 和转换 hmap 的 ruby 代码开源，使得脚本可以摆脱额外的命令行工具安装
