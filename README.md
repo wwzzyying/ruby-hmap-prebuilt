@@ -6,7 +6,6 @@
 ## Usuage
 
 1. 将 `hmap-prebuilt` 目录移动到工程主目录 (与 `Pods` 目录同级)
-2. 将 `hmap-prebuilt.rb` 脚本移动到工程主目录 (与 `Pods` 目录同级)
 3. `Podfile` 引入 `hmap-prebuilt.rb`
 4. 在 `post_install` 中调用 `hmap_prebuilt` 函数并传入 `installer` 参数
 
@@ -24,10 +23,8 @@
 
 ## Problems
 
-1. Json convert to Hmap转换时间过长。2.4MB大小的 json 传给 HMapSaver 生成 Hmap需要的处理时间长达 30+秒
-2. 通过 header_mappings_by_file_accessor 获取的头文件不够全，部分奇怪的头文件会缺失，并且不能够代替系统头文件，需要筛选 target 使用
-
-结论：**现阶段如果没有更好的解决办法的话，该 hmap 方案在大型项目中可用性不高，不然后期容易频繁出现头文件索引问题**
+1. Json convert to Hmap转换时间过长。2.4MB大小的 json 传给 HMapSaver 生成 Hmap需要的处理时间长达 30+秒（补充：cocoapods-hmap更新后生成速度大幅提升）
+2. 通过 header_mappings_by_file_accessor 获取的头文件不够足以覆盖工程中全部头文件的引用，需要筛选 target 使用
 
 
 

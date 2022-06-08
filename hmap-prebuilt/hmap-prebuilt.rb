@@ -7,7 +7,10 @@ require 'pp'
 require './hmap-prebuilt/hmap_saver.rb'
 
 def hmap_prebuilt(installer)
-    puts "[WZY] - start to prebuilt header map"
+    json_path = File.join(Dir.pwd, "/Pods/all_header_map_prebuilt.json")
+    hmap_path = File.join(Dir.pwd, "/Pods/all_header_map_prebuilt.hmap")
+    
+    puts "[hmap_prebuilt] - start to prebuilt header map"
     
     # 保存结果的 hash
     result_hash = Hash.new()
@@ -31,36 +34,30 @@ def hmap_prebuilt(installer)
     result_json = JSON.pretty_generate(result_hash)
     
     # 保存为 json 文件
-    hmap_dir_name = "hmap_prebuilt"
-    hmap_name = "all_header_map_prebuilt"
-    hmap_prebuilt_dir = File.join(Dir.pwd, "/Pods/#{hmap_dir_name}")
-    result_json_path = File.join(Dir.pwd, "/Pods/#{hmap_dir_name}/#{hmap_name}.json")
-    result_hmap_path = File.join(Dir.pwd, "/Pods/#{hmap_dir_name}/#{hmap_name}.hmap")
+    exist_hmap_json = JSON.parse(File.read(json_path)) if File.exist?(json_path)
+    json_file = File.new(json_path, "w")
+    json_file << result_json
+    json_file.close
     
-    FileUtils.mkdir_p(hmap_prebuilt_dir) unless File.directory?(hmap_prebuilt_dir)
-    result_json_file = File.new(result_json_path, "w")
-    result_json_file << result_json
-    result_json_file.close
+    puts "[hmap_prebuilt] - pretty generate json finish: total time = %.2f s" % (Time.now - start_time).to_f
     
     # convert json to hmap
-    from_file = result_json_path
-    to_file = result_hmap_path
-    HMapSaver.new_from_buckets(JSON.parse(File.read(from_file))).write_to(to_file)
-    File.delete(from_file)
+    start_convert_time = Time.now
+    from_file = json_path
+    to_file = hmap_path
+    HMap::HMapSaver.new_from_buckets(JSON.parse(File.read(from_file))).write_to(to_file)
     
-    puts "[WZY] - prebuilt header map finish: total time = %.2f s" % (Time.now - start_time).to_f
+    puts "[hmap_prebuilt] - prebuilt header map finish: total time = %.2f s" % (Time.now - start_convert_time).to_f
     
     # 关闭所有组件的 USE_HEADERMAP, 其余手动关闭
-    installer.pods_project.targets.each do |target|
-        target.build_configurations.each do |config|
-            config.build_settings["USE_HEADERMAP"] = "NO"
-        end
+    installer.generated_projects.map { |project| project.targets }.flatten.each do |target|
+        target.append_xcconfig_attribute("USE_HEADERMAP", "NO")
     end
     
-    # 替换全部 pod 的 HEADER_SEARCH_PATH
+    # 替换 HEADER_SEARCH_PATH
     start_time = Time.now
-    file_in_path = "\"${PODS_ROOT}/#{hmap_dir_name}/#{hmap_name}.hmap\""
-    installer.pods_project.targets.each do |target|
+    file_in_path = "\"${PODS_ROOT}/all_header_map_prebuilt.hmap\""
+    installer.generated_projects.map { |project| project.targets }.flatten.each do |target|
         target.build_configurations.each do |config|
             next unless config.base_configuration_reference
             xcconfig_path = config.base_configuration_reference.real_path
@@ -75,6 +72,6 @@ def hmap_prebuilt(installer)
         end
     end
     
-    puts 'replace_header_search_path_with_hmap_path: total time = %.2f s' % (Time.now - start_time).to_f
+    puts '[hmap_prebuilt] - replace header search path finish: total time = %.2f s' % (Time.now - start_time).to_f
     
 end

@@ -1,58 +1,35 @@
-require File.join(File.dirname(__FILE__), 'hmap_bucket.rb')
-require File.join(File.dirname(__FILE__), 'MapFile.rb')
+# frozen_string_literal: true
 
-class HMapSaver
-    include Utils
-    attr_reader :string_table, :buckets, :headers
-    
-    def initialize
-        @string_table = "\0"
-        @buckets = []
-        @headers = {}
-    end
-    
+require File.join(File.dirname(__FILE__), 'hmap_struct.rb')
+require File.join(File.dirname(__FILE__), 'mapfile.rb')
+require 'hashtable'
+
+module HMap
+  # @class HMapSaver
+  class HMapSaver
+    attr_reader :string_table
+
     def self.new_from_buckets(buckets)
-        saver = new
-        saver.add_to_buckets(buckets)
-        saver
+      saver = new
+      saver.add_to_buckets(buckets) unless buckets.empty?
+      saver
     end
-    
+
     def add_to_buckets(buckets)
-        buckets.each { |bucket| add_to_bucket(bucket) }
+      return if buckets.nil?
+
+      hash_t = HashTable::HashTable.new_from_vlaue_placeholder(buckets.length, EMPTY_BUCKET, expand: true)
+      ta = HashTable::StringHashTraits.new { |bs| HMapBucket.new(*bs).serialize }
+      buckets.each_pair do |key, value|
+        hash_t.set(key, value, ta)
+      end
+      @strings = ta.string_table
+      @buckets = hash_t.values
+      @entries = hash_t.num_entries
     end
-    
-    def add_to_bucket(buckets)
-        # buckets 是每个头文件 key-value
-        values = buckets.map { |key|
-            if key.class == Hash
-                add_to_headers(key.values.first)
-            else
-                add_to_headers(key)
-            end
-        }
-        if buckets.first.include?("/")
-            values.push(add_to_headers(buckets.first.split("/").last))
-        else
-            values.push(values[0])
-        end
-        bucket = HMapBucket.new(*values)
-        bucket.uuid = Utils.string_downcase_hash(buckets.first)
-        @buckets << bucket
-    end
-    
-    def add_to_headers(key)
-        if headers[key].nil?
-            headers[key] = string_table.length
-            add_to_string_table(key)
-        end
-        headers[key]
-    end
-    
-    def add_to_string_table(str)
-        @string_table += "#{Utils.safe_encode(str, 'ASCII-8BIT')}\0"
-    end
-    
+
     def write_to(path)
-        MapFile.new(@string_table, @buckets).write(path)
+      MapFile.new(@strings, @buckets, @entries).write(Pathname(path))
     end
+  end
 end
